@@ -53,6 +53,3 @@ resource "aws_elb" "bar" {
   }
 }
 
-output "ELB" {
-  value = aws_elb.bar.dns_name
-}
