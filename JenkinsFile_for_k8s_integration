@@ -1,0 +1,64 @@
+pipeline {
+    agent any
+    
+    tools{
+        jdk 'jdk11'
+        maven 'maven3'
+    }
+    environment{
+        SCANNER_HOME= tool 'sonar-scanner' 
+    }
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main', changelog: false, poll: false, url: 'https://github.com/asim0196/Devops-CICD.git'
+            }
+        }
+        
+        stage('Code Compile') {
+            steps {
+                sh 'mvn compile'
+            }
+        }
+        
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar-scanner') {
+                  sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Devops-CICD \
+                  -Dsonar.java.binaries=. \
+                  -Dsonar.projectKey=Devops-CICD '''
+                }
+            }
+        }
+        
+        stage('Code Build') {
+            steps {
+                sh 'mvn clean install'
+            }
+        }
+        
+        stage('Docker Build') {
+            steps {
+                script{
+                    withDockerRegistry(credentialsId: 'c1d0ee2b-9750-451d-b4cf-cac1a05dd1c4', toolName: 'docker-latest') {
+                     sh 'docker build -t aasim113322/cicddevops:$BUILD_NUMBER .'
+                     
+                     sh 'docker push aasim113322/cicddevops:$BUILD_NUMBER'
+                   }
+                }
+            }
+        }
+        
+        //stage('Deployment') {
+            //steps {
+                //withKubeCredentials(kubectlCredentials: [[caCertificate: '', clusterName: 'sample', contextName: '', credentialsId: 'SECRET_TOKEN', namespace: 'default', serverUrl: 'https://54E8DA56F3D4324141AD0A9E14F6152D.gr7.ap-south-1.eks.amazonaws.com']]) {
+                  // sh 'curl -LO "https://storage.googleapis.com/kubernetes-release/release/v1.20.5/bin/linux/amd64/kubectl"'  
+                   //sh 'chmod u+x ./kubectl'
+                   //sh './kubectl apply -f deployment.yml'
+                   
+                //}
+            //}
+        //}
+    }
+}
